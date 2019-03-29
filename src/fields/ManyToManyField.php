@@ -4,6 +4,7 @@ namespace Page8\ManyToMany\fields;
 
 use Craft;
 use Craft\base\Field;
+use craft\base\PreviewableFieldInterface;
 use craft\elements\Entry;
 use Page8\ManyToMany\Plugin;
 use craft\base\ElementInterface;
@@ -11,7 +12,7 @@ use craft\base\ElementInterface;
 /**
  * @property string $settingsHtml
  */
-class ManyToManyField extends Field
+class ManyToManyField extends Field implements PreviewableFieldInterface
 {
     /**
      * Section source
@@ -159,7 +160,7 @@ class ManyToManyField extends Field
             'value' => $value,
             'id' => $namespacedId,
             'current' => $relatedEntries,
-            'section' => $relatedSection->id,
+            'section' => $relatedSection->uid,
             'nonSelectable' => $nonSelectable,
             'singleField' => $this->singleField,
             'nameSpace' => Craft::$app->view->getNamespace(),
@@ -177,4 +178,28 @@ class ManyToManyField extends Field
 
         parent::afterElementSave($element, $isNew);
     }
+
+    /**
+     * Picks the first entry of a revers relationship (if any) and displays as link in the CP content table list
+     *
+     * @inheritdoc
+     */
+    public function getTableAttributeHtml($value, ElementInterface $element): string
+    {
+        $plugin = Plugin::getInstance();
+        $service = $plugin->service;
+
+        $relatedSection = Craft::$app->sections->getSectionById($this->source['value']);
+        $relatedEntries = $service->getRelatedEntries($element, $relatedSection, $this->singleField);
+
+        $element = $relatedEntries[0] ?? null;
+
+        if ($element) {
+            return Craft::$app->getView()->renderTemplate('_elements/element', [
+                'element' => $element
+            ]);
+        }
+        return '';
+    }
+
 }
